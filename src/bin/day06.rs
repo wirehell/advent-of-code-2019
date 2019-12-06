@@ -5,9 +5,75 @@ use std::io::{BufReader, BufRead};
 use std::collections::HashSet;
 use std::collections::HashMap;
 use regex::Regex;
-use std::borrow::{Borrow, BorrowMut};
 
 extern crate regex;
+
+fn find_node(orbits :&HashMap<String, HashSet<String>>, current_node: &str, node: &str) -> Option<Vec<String>> {
+    if current_node == node {
+        print!("Found node!");
+        return Some(vec![String::from(current_node)])
+    } else {
+        println!("Current node: {}", current_node);
+        let maybe_child_set = orbits.get(current_node);
+        match maybe_child_set {
+            Some(child_set) => {
+                for child in child_set {
+                    match find_node(&orbits, child, node) {
+                        Some(path) => {
+                            let mut ext = path.clone();
+                            ext.push(String::from(current_node));
+                            return Some(ext);
+                        },
+                        _ => {}
+                    }
+                }
+            },
+            _ => {}
+        }
+        return None
+    }
+
+}
+
+fn construct_orbits(data :Vec<(String, String)>) -> HashMap<String, HashSet<String>> {
+    let mut orbits : HashMap<String, HashSet<String>> = HashMap::new();
+
+    for (p, c) in data {
+        println!("Hmm: ");
+        let parent_name = p.clone();
+        let child_name = c.clone();
+
+        let something = orbits.entry(String::from(p))
+            .or_insert(HashSet::new());
+        something.insert(String::from(c));
+
+    }
+    return orbits;
+}
+
+fn santa_distance(data :Vec<(String, String)>) -> i32 {
+
+    let mut santa_dist : HashMap<String, i32> = HashMap::new();
+
+    let orbits = construct_orbits(data);
+
+    let santa_path = find_node(&orbits, "COM", "SAN");
+
+    let mut dist = 0;
+
+    for node in santa_path.unwrap() {
+        match find_node(&orbits, &node, "YOU") {
+            Some(path) => {
+                println!("Found path: {:?}", path);
+                return (dist - 1) + (path.len() as i32 - 2)
+            }
+            _ => {}
+        }
+        dist += 1;
+    }
+
+   return -1;
+}
 
 fn construct_starmap(data :Vec<(String, String)>) -> (i64, i64){
     let mut orbits : HashMap<String, HashSet<String>> = HashMap::new();
@@ -72,10 +138,14 @@ fn main() {
     for line in file.lines() {
         orbits.push(parse_line(line.unwrap().trim()));
     }
+    /*
     let res = construct_starmap(orbits);
     let (a, b) = res;
-
     println!("Hm: {:?} {}", res, a+b)
+    */
+
+    let santa_d = santa_distance(orbits);
+    println!("Santa distance: {}", santa_d);
 }
 
 fn parse_line(s :&str) -> (String, String) {
@@ -86,11 +156,60 @@ fn parse_line(s :&str) -> (String, String) {
 
 #[cfg(test)]
 mod tests {
-    use crate::{construct_starmap, parse_line};
+    use crate::{parse_line, find_node, construct_orbits, santa_distance};
 
     #[test]
     fn test_parse() {
         assert_eq!(parse_line("AB)CD"), (String::from("AB"), String::from("CD")));
+    }
+
+    #[test]
+    fn test_find_node() {
+        let input =
+            vec![
+                (String::from("COM"), String::from("B")),
+                (String::from("B"), String::from("C")),
+                (String::from("C"), String::from("D")),
+                (String::from("D"), String::from("E")),
+                (String::from("E"), String::from("F")),
+                (String::from("B"), String::from("G")),
+                (String::from("G"), String::from("H")),
+                (String::from("D"), String::from("I")),
+                (String::from("E"), String::from("J")),
+                (String::from("J"), String::from("K")),
+                (String::from("K"), String::from("L")),
+                (String::from("K"), String::from("YOU")),
+                (String::from("I"), String::from("SAN")),
+            ];
+
+        let orbits = construct_orbits(input);
+
+        let res = find_node(&orbits, "COM", "SAN");
+        println!("Reul {:?}", res);
+    }
+
+    #[test]
+    fn test_sana() {
+        let input =
+            vec![
+                (String::from("COM"), String::from("B")),
+                (String::from("B"), String::from("C")),
+                (String::from("C"), String::from("D")),
+                (String::from("D"), String::from("E")),
+                (String::from("E"), String::from("F")),
+                (String::from("B"), String::from("G")),
+                (String::from("G"), String::from("H")),
+                (String::from("D"), String::from("I")),
+                (String::from("E"), String::from("J")),
+                (String::from("J"), String::from("K")),
+                (String::from("K"), String::from("L")),
+                (String::from("K"), String::from("YOU")),
+                (String::from("I"), String::from("SAN")),
+            ];
+
+
+        let res = santa_distance(input);
+        println!("Reul {:?}", res);
     }
 
     #[test]
