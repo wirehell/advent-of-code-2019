@@ -227,7 +227,6 @@ fn execute_feedback(initial: Memory, setting: Vec<i32>) -> i32 {
         child.join();
     }
 
-
     return max;
 }
 
@@ -253,9 +252,9 @@ fn find_max_phaser(initial: Memory) -> i32 {
             code[perm[3]],
             code[perm[4]],
         ];
-        println!("Executing with setting: {:?}", settings);
+//        println!("Executing with setting: {:?}", settings);
         let result = execute_phaser(initial.clone(),settings);
-        println!("Result: {}", result);
+//        println!("Result: {}", result);
         if result > max {
             max = result;
         }
@@ -276,9 +275,9 @@ fn find_max_feedback(initial: Memory) -> i32 {
             code[perm[3]],
             code[perm[4]],
         ];
-        println!("Executing with setting: {:?}", settings);
+//        println!("Executing with setting: {:?}", settings);
         let result = execute_feedback(initial.clone(),settings);
-        println!("Result: {}", result);
+//        println!("Result: {}", result);
         if result > max {
             max = result;
         }
