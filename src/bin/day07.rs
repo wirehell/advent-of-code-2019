@@ -211,7 +211,7 @@ fn execute_feedback(initial: Memory, setting: Vec<i32>) -> i32 {
     // Init
     input_writer.send(Message::Data(0));
 
-    let mut max = i32::MIN;
+    let mut max = i32::min_value();
     loop {
         match output.recv().unwrap() {
             Message::Data(data) => {

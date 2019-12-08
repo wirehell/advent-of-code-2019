@@ -1,87 +1,105 @@
 mod mutable_union_set {
     use std::rc::Rc;
-    use std::borrow::Borrow;
+    use std::borrow::{Borrow, BorrowMut};
     use std::cell::{RefCell, Ref};
     use std::ops::Deref;
+    use std::cmp::Ordering;
 
-
-    /*
-    #[derive(Eq,PartialEq,Debug)]
-    pub struct UnionSet<T :Eq> {
-        elem: T,
-        parent: Rc<RefCell<Option<UnionSet<T>>>>,
+    #[derive(Debug)]
+    pub struct UnionSet {
+        items: Vec<UnionItem>
     }
 
+    #[derive(PartialEq, Eq,Debug)]
+    pub struct UnionItem {
+        value : i32,
+        rank : RefCell<i32>,
+        parent : Rc<RefCell<Option<i32>>>,
+    }
 
-    impl<K: Eq> UnionSet<K> {
-        pub fn of(object: K) -> UnionSet<K> {
-            UnionSet { elem: object, parent: Rc::new(RefCell::new(None) )}
+    impl UnionSet {
+        pub fn of(size: i32) -> UnionSet {
+            let items = (0..size).map(|i|
+                UnionItem { value: i, rank: RefCell::new(0), parent: Rc::new(RefCell::new(None)) }
+            ).collect();
+            UnionSet { items }
         }
-    }
 
-    pub fn find_root<K :Eq>(s :&UnionSet<K>) -> &UnionSet<K> {
-        let val ;
-        {
-            let cell :&RefCell<Option<UnionSet<K>>> = s.parent.borrow();
-            let borrow :Ref<Option<UnionSet<K>>> = cell.borrow();
-            match borrow.as_ref() {
-                None => val = s,
-                Some(parent) => {
-                    val = find_root(parent).clone()
+        pub fn find(&self, i :i32) -> &UnionItem {
+            let item  = &self.items[i as usize];
+            let maybe_parent = RefCell::borrow(&item.parent);
+            return match *maybe_parent {
+                None => item,
+                Some(parent) => self.find(parent),
+            }
+        }
+
+        pub fn find_first(&self, i :i32) -> &UnionItem {
+            return &self.items[i as usize]
+        }
+
+        pub fn union_sets(&self, item1 :i32, item2 :i32) -> &UnionItem {
+            let r1 = self.find(item1);
+            let r2 = self.find(item2);
+
+            if r1 == r2 {
+                return r1
+            }
+
+            let comparison = r1.rank.borrow().cmp(&*r2.rank.borrow());
+            match comparison {
+                Ordering::Less => {
+                    println!("Less");
+                    r1.parent.replace(Some(r2.value));
+                    return r2
                 },
-            };
-        }
-        return val;
-    }
+                Ordering::Greater => {
+                    println!("Greater");
+                    r2.parent.replace(Some(r1.value));
+                    return r1
+                },
+                Ordering::Equal => {
+                    println!("Eq");
+                    r2.parent.replace(Some(r1.value));
+                    let prev_rank = *r1.rank.borrow();
+                    r1.rank.replace(prev_rank + 1);
+                    return r1
+                }
 
+            }
 
-
-    pub fn identity<K: Eq>(s: Rc<UnionSet<K>>) -> Rc<UnionSet<K>> {
-    }
-        return match s.parent.borrow() {
-            Some(n) => identity(n),
-            None => s,
-        }
-    }
-
-    pub fn union<K: Eq>(s1: UnionSet<K>, s2: UnionSet<K>) {
-        let r1 = identity(Rc::new(s1));
-        let r2 = identity(Rc::new(s2));
-        if r1 == r2 {
-            return;
         }
 
-        if r1.rank > r2.rank {
-            r2.parent.replace(Some(r1));
+        pub fn same_component(&self, item1 :i32, item2 :i32) -> bool {
+            return self.find(item1) == self.find(item2);
+
         }
     }
-
-    pub fn is_same_component<K: Eq>(s1: UnionSet<K>, s2: UnionSet<K>) -> bool {
-        return identity(Rc::new(s1)) == identity(Rc::new(s2));
-    }
-*/
 
 }
+
 #[cfg(test)]
 mod tests {
-    /*
-    use crate::mutable_union_set::mutable_union_set::{UnionSet, find_root};
+    use std::rc::Rc;
+    use std::borrow::Borrow;
+    use crate::mutable_union_set::mutable_union_set::UnionSet;
 
     #[test]
     fn test_simple() {
-        let s1 = UnionSet::of(32);
-        let s2 = UnionSet::of(27);
+        let s = UnionSet::of(32);
 
-        let b = find_root(&s1);
+        let b = s.find(3);
+        println!("{:?}", b);
 
-//        assert_eq!(is_same_component(s1, s2), false);
-        //union(s1,s2);
-//        assert_eq!(is_same_component(s1, s2), true);
+        s.union_sets(3,4);
+        assert_eq!(s.same_component(3,2), false);
 
+        assert_eq!(s.same_component(3,4), true);
+        s.union_sets(2,3);
+        assert_eq!(s.same_component(2,4), true);
     }
 
     #[test]
     fn it_doesnt_find_anything_in_empty() {
     }
-    */
 }
