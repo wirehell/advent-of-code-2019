@@ -245,60 +245,6 @@ fn execute_with_result(initial: Memory, in_data: Vec<Word>) -> OutputData {
     return result;
 }
 
-fn execute_feedback(initial: Memory, setting: Vec<Word>) -> Word {
-    let (input_writer, input_reader): (SyncSender<Message>, Receiver<Message>) = mpsc::sync_channel(1);
-
-    let mut step_reader = input_reader;
-    let mut step_input_writer = input_writer.clone();
-
-    let mut children = Vec::new();
-    for s in setting {
-        let (s_out_writer, next_in_reader) : (SyncSender<Message>, Receiver<Message>) = mpsc::sync_channel(1);
-        // Send setting
-        step_input_writer.send(Message::Data(s));
-        let child_writer = s_out_writer.clone();
-        let mem = initial.clone();
-        let child = thread::spawn(move || {
-            execute(&mem, step_reader, child_writer);
-        });
-        children.push(child);
-        step_reader = next_in_reader;
-        step_input_writer = s_out_writer;
-    }
-    let output = step_reader;
-
-    // Init
-    input_writer.send(Message::Data(0));
-
-    let mut max = Word::min_value();
-    loop {
-        match output.recv().unwrap() {
-            Message::Data(data) => {
-                if data > max {
-                    max = data;
-                }
-                input_writer.send(Message::Data(data));
-            },
-            Message::Shutdown => break,
-        }
-    }
-    for child in children {
-        child.join();
-    }
-
-    return max;
-}
-
-fn execute_phaser(initial: Memory, setting: Vec<Word>) -> Word {
-    let mut result = 0;
-    for setting in setting {
-        let output = execute_with_result(initial.clone(), vec![setting, result]);
-        assert_eq!(output.len(), 1);
-        result = output[0];
-    }
-    return result;
-}
-
 
 fn execute(initial: &Memory, stdin: Receiver<Message>, stdout: SyncSender<Message>) -> (Memory) {
 
@@ -322,6 +268,7 @@ fn execute_step(mut mem: &mut Memory, mut state: &mut ProcessorState, io: &mut I
 
     let instruction = decode_instruction(&state.ip, &mem);
     println!("Executing: {:?} {:?}", state, instruction);
+    stdout().flush();
 //    sleep(Duration::from_millis(100));
     match instruction {
         Add {op1, op2, dst} => {
@@ -397,6 +344,7 @@ fn execute_step(mut mem: &mut Memory, mut state: &mut ProcessorState, io: &mut I
             io.stdout.send(Message::Shutdown);
             return true;
             //    println!("Halt!");
+            stdout().flush();
         },
         AdjustRelativeBase { op } => {
             //println!("Adjusting!");
