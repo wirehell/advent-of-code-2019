@@ -4,10 +4,17 @@ version = "0.1.0"
 authors = ["Kenny Johansson <wirehell@gmail.com>"]
 edition = "2018"
 
+build = "build.rs" # LALRPOP preprocessing
+
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-regex = "1"
 log = "0.4.8"
 env_logger = "0.7.1"
 permutate = "0.3.2"
+lalrpop-util = "0.17.2"
+regex = "0.2.0"
+
+[build-dependencies]
+lalrpop = "0.17.2"
