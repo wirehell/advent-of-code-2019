@@ -13,8 +13,10 @@ build = "build.rs" # LALRPOP preprocessing
 log = "0.4.8"
 env_logger = "0.7.1"
 permutate = "0.3.2"
-lalrpop-util = "0.17.2"
+#lalrpop-util = "0.17.2"
 regex = "0.2.0"
+itertools = "0.8.2"
+num = "0.2.0"
 
 [build-dependencies]
-lalrpop = "0.17.2"
+#lalrpop = "0.17.2"
