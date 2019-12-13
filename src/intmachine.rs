@@ -11,8 +11,8 @@ use std::thread::sleep;
 use std::time::Duration;
 use crate::intmachine::Message::RequestInput;
 
-type Word = i64;
-type Memory = Vec<Word>;
+pub type Word = i64;
+pub type Memory = Vec<Word>;
 type OutputData = Vec<Word>;
 type InputData = VecDeque<Word>;
 
