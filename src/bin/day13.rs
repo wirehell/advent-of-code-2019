@@ -10,6 +10,8 @@ use std::borrow::Borrow;
 use std::collections::hash_map::RandomState;
 use crate::Tile::{Empty, Wall, Block, Paddle, Ball};
 use crate::ArcadeState::{ReadY, ReadTile, ReadX};
+use std::thread::sleep;
+use std::time::Duration;
 
 
 #[derive(Clone, Eq, PartialEq, Debug)]
@@ -46,7 +48,9 @@ impl Tile {
 struct Screen {
     x_size :i64,
     y_size :i64,
-    pixels: Vec<Tile>
+    pixels: Vec<Tile>,
+    paddle_pos: (Word, Word),
+    ball_pos: (Word, Word),
 }
 
 impl Screen {
@@ -54,13 +58,20 @@ impl Screen {
         Screen {
             x_size,
             y_size,
-            pixels: vec![Empty; (x_size * y_size) as usize]
+            pixels: vec![Empty; (x_size * y_size) as usize],
+            paddle_pos: (0, 0),
+            ball_pos: (0, 0)
         }
     }
 
     fn draw(&mut self, tile: Tile, x :&Word, y :&Word) {
         assert!(*x < self.x_size);
         assert!(*y < self.y_size);
+        match tile {
+            Paddle => self.paddle_pos = (*x, *y),
+            Ball => self.ball_pos = (*x, *y),
+            _ => {},
+        }
         self.pixels[(y*self.x_size + x) as usize] = tile;
     }
 
@@ -128,7 +139,18 @@ impl ArcadeCabinet {
 
 }
 
-
+fn calc_input(screen :&Screen) -> Word {
+//    print!("{}[2J", 27 as char);
+//    screen.print();
+//    sleep(Duration::from_millis(100));
+    if screen.ball_pos.0 > screen.paddle_pos.0 {
+        return 1;
+    } else if screen.ball_pos.0 < screen.paddle_pos.0 {
+        return -1
+    } else {
+        return 0;
+    }
+}
 
 
 fn main() {
@@ -136,7 +158,7 @@ fn main() {
     let filename = &args[1];
 
     let mut program = intmachine::read_program(filename);
-//    program[0] = 2; // Free to play hack!!
+    program[0] = 2; // Free to play hack!!
 
     let mut arcade = ArcadeCabinet::new();
 
@@ -153,12 +175,13 @@ fn main() {
             Ok(message) => {
                 match message {
                     Message::Data(data) =>  {
-                        arcade.output(data)
+                        arcade.output(data);
+
                     }
 
                     Message::Shutdown => break,
                     Message::RequestInput => {
-                        panic!("Unexpected input");
+                        input.send(Message::Data(calc_input(&arcade.screen)));
                     }
                 }
             }
@@ -169,20 +192,13 @@ fn main() {
     }
     child.join();
 
-    let result = arcade.screen.count_block_tiles();
+    let result = arcade.score;
     arcade.screen.print();
-    println!("Result: {}", result);
+    println!("Score: {}", result);
 
 }
 
 #[cfg(test)]
 mod tests {
-
-    /*
-    #[test]
-    fn test() {
-        assert_eq!(split_and_parse(&"1,2,3"), [1,2,3])
-    }
-    */
 
 }
