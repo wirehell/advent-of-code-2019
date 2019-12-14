@@ -45,7 +45,7 @@ impl NanoFactory {
         }
         let missing;
         {
-            let mut s = self.storage.entry(name.clone()).or_insert(0);
+            let s = self.storage.entry(name.clone()).or_insert(0);
             //println!("Available of {} : {}", name, s);
             *s -= *amount;
 
@@ -76,14 +76,13 @@ impl NanoFactory {
             produced_amount = o.1;
         }
         {
-            let mut entry = self.storage.entry(name.clone()).or_insert(0);
+            let entry = self.storage.entry(name.clone()).or_insert(0);
             *entry = *entry + produced_amount;
             //println!("New amount of {}: {}", &name, entry);
         }
         // Borrowed item creation
         {
             for item in order {
-                let (name, amount) = &item;
                 self.get(&item);
             }
         }
@@ -181,14 +180,14 @@ fn fuel_per_trillion_ore(formulas: &Vec<Formula>, lo: i64, hi: i64) -> i64 {
     let middle = (hi + lo) / 2;
     let val = evalute(formulas, middle);
 
-    println!("lo: {} hi: {} mid: {} val: {}", &lo, &hi, &middle, &val);
+//    println!("lo: {} hi: {} mid: {} val: {}", &lo, &hi, &middle, &val);
 
     if val > target {
         return fuel_per_trillion_ore(formulas, lo, middle - 1);
     } else if val < target {
         return fuel_per_trillion_ore(formulas, middle + 1, hi);
     } else {
-        println!("WFT {}", &middle);
+ //       println!("WFT {}", &middle);
         return middle
     }
 }
