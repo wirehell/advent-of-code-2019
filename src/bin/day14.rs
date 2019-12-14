@@ -7,18 +7,18 @@ use std::str::FromStr;
 extern crate regex;
 
 type Name = String;
-type Amount = i32;
+type Amount = i64;
 
 type SubstanceAmount = (Name, Amount);
 
 #[derive(Debug)]
 struct NanoFactory {
-    storage:  HashMap<String, i32>,
-    ore: i32,
+    storage:  HashMap<String, i64>,
+    ore: i64,
     formulas: HashMap<String, Formula>,
 }
 
-fn ceil_div(x: &i32, y:&i32) -> i32 {
+fn ceil_div(x: &i64, y:&i64) -> i64 {
     return x/y + if x % y != 0 { 1 } else { 0 }
 }
 
@@ -37,7 +37,7 @@ impl NanoFactory {
     }
 
     fn get(&mut self, subst: &SubstanceAmount)  {
-        println!("Consuming: {:?}", subst);
+        //println!("Consuming: {:?}", subst);
         let (name, amount) = subst;
         if name == "ORE" {
             self.ore += *amount;
@@ -46,17 +46,17 @@ impl NanoFactory {
         let missing;
         {
             let mut s = self.storage.entry(name.clone()).or_insert(0);
-            println!("Available of {} : {}", name, s);
+            //println!("Available of {} : {}", name, s);
             *s -= *amount;
 
-            println!("Left after get {} : {}", &name, *s);
+            //println!("Left after get {} : {}", &name, *s);
             if *s < 0 {
                 missing = Some((*s).abs());
             } else {
                 missing = None;
             }
         }
-        println!("Missing in storage: {:?}", &missing);
+        //println!("Missing in storage: {:?}", &missing);
         match missing {
             Some(num) => self.produce(&(name.clone(), num)),
             None => {}
@@ -65,20 +65,20 @@ impl NanoFactory {
 
     fn produce(&mut self, subst :&SubstanceAmount) {
         let (name, amount) = subst;
-        println!("Producing: {:?}", subst);
+        //println!("Producing: {:?}", subst);
         let order;
         let produced_amount;
         {
             let formula :&Formula = self.formulas.get(name).unwrap();
             let o = create_order(formula, amount);
-            println!("Order: {:?}", &o);
+            //println!("Order: {:?}", &o);
             order = o.0;
             produced_amount = o.1;
         }
         {
             let mut entry = self.storage.entry(name.clone()).or_insert(0);
             *entry = *entry + produced_amount;
-            println!("New amount of {}: {}", &name, entry);
+            //println!("New amount of {}: {}", &name, entry);
         }
         // Borrowed item creation
         {
@@ -89,12 +89,12 @@ impl NanoFactory {
         }
     }
 
-    fn get_ore_used_(&self) -> i32 {
+    fn get_ore_used_(&self) -> i64 {
         return self.ore;
     }
 }
 
-fn create_order(formula :&Formula, amount :&i32) -> (Vec<SubstanceAmount>, i32) {
+fn create_order(formula :&Formula, amount :&i64) -> (Vec<SubstanceAmount>, i64) {
     let mut order = vec![];
     let (ingredients, output) = formula;
     let (_o, output_amount) = output;
@@ -112,7 +112,7 @@ type Formula = (Ingredients, SubstanceAmount);
 
 fn parse_substance(s: &str) -> SubstanceAmount {
     let parts :Vec<&str> = s.trim().split(' ').collect();
-    let amount = i32::from_str(parts[0]).unwrap();
+    let amount = i64::from_str(parts[0]).unwrap();
     let name = String::from(parts[1]);
     return (name, amount)
 }
@@ -156,12 +156,41 @@ fn main() {
 
     println!("{:?}", &factory);
     println!("{:?}", &factory.ore);
+
+    println!("Result: {}", fuel_per_trillion_ore(&formulas, 0, 10000000000000));
 }
 
-fn fuel_per_trillion_ore(filename :&str) -> i32 {
+
+fn evalute(formulas: &Vec<Formula>, fuel: i64) -> i64 {
     let mut factory = NanoFactory::new(&formulas);
     factory.get(&(String::from("FUEL"), fuel));
+    return factory.get_ore_used_();
 
+}
+
+
+
+fn fuel_per_trillion_ore(formulas: &Vec<Formula>, lo: i64, hi: i64) -> i64 {
+    let target = 1000000000000;
+
+    if hi < lo {
+        println!("lo: {}  hi:{}", &lo, &hi);
+        return hi;
+    }
+
+    let middle = (hi + lo) / 2;
+    let val = evalute(formulas, middle);
+
+    println!("lo: {} hi: {} mid: {} val: {}", &lo, &hi, &middle, &val);
+
+    if val > target {
+        return fuel_per_trillion_ore(formulas, lo, middle - 1);
+    } else if val < target {
+        return fuel_per_trillion_ore(formulas, middle + 1, hi);
+    } else {
+        println!("WFT {}", &middle);
+        return middle
+    }
 }
 
 #[cfg(test)]
@@ -193,12 +222,14 @@ mod tests {
 
     #[test]
     fn test_trillion_13312() {
-        assert_eq!(fuel_per_trillion_ore("./data/day14/test3.txt"), 82892753);
+        let formulas = read_file("./data/day14/test3.txt");
+        assert_eq!(fuel_per_trillion_ore(&formulas, 0, 1000000000000), 82892753);
     }
 
     #[test]
     fn test_trillion_180697() {
-        assert_eq!(fuel_per_trillion_ore("./data/day14/test4.txt"), 5586022);
+        let formulas = read_file("./data/day14/test4.txt");
+        assert_eq!(fuel_per_trillion_ore(&formulas, 0, 1000000000), 5586022);
     }
 
     #[test]
