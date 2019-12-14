@@ -1,7 +1,7 @@
 mod mutable_union_set {
     use std::rc::Rc;
-    use std::borrow::{Borrow, BorrowMut};
-    use std::cell::{RefCell, Ref};
+    use std::borrow::{Borrow};
+    use std::cell::{RefCell};
     use std::ops::Deref;
     use std::cmp::Ordering;
 
