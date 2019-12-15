@@ -267,6 +267,7 @@ fn execute_step(mut mem: &mut Memory, mut state: &mut ProcessorState, io: &mut I
         },
         Output {src} => {
             let val = load(&mem, &state, src);
+        //    println!("Output: {}", val);
             io.stdout.send(Message::Data(val));
             state.ip += 2;
         }

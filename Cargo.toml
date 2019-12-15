@@ -17,6 +17,7 @@ permutate = "0.3.2"
 regex = "0.2.0"
 itertools = "0.8.2"
 num = "0.2.0"
+rand = "0.7.2"
 
 [build-dependencies]
 #lalrpop = "0.17.2"

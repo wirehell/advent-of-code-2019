@@ -158,7 +158,8 @@ fn main() {
     let filename = &args[1];
 
     let mut program = intmachine::read_program(filename);
-    program[0] = 2; // Free to play hack!!
+    println!("prog: {:?}", &program);
+//    program[0] = 2; // Free to play hack!!
 
     let mut arcade = ArcadeCabinet::new();
 
@@ -175,13 +176,13 @@ fn main() {
             Ok(message) => {
                 match message {
                     Message::Data(data) =>  {
-                        arcade.output(data);
+               //         arcade.output(data);
 
                     }
 
                     Message::Shutdown => break,
                     Message::RequestInput => {
-                        input.send(Message::Data(calc_input(&arcade.screen)));
+               //         input.send(Message::Data(calc_input(&arcade.screen)));
                     }
                 }
             }
