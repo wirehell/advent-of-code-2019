@@ -88,7 +88,7 @@ impl Controller {
             state: Input,
         };
         c.update_tile(&start.0, &start.1, Start);
-        c.set_dist(start.0, start.1, 0);
+        //c.set_dist(start.0, start.1, 0);
         return c;
     }
 
@@ -117,6 +117,16 @@ impl Controller {
         }
     }
 
+    pub fn get_max_dist(&self) -> i64 {
+        let mut max = 0;
+        for x in self.dist.iter() {
+            if *x < 9999999  && *x > max {
+                max = *x;
+            }
+        }
+        return max;
+    }
+
     pub fn update(&mut self, data: Word) {
         let (rx,ry) = self.robot_pos;
         let (x,y) = match &self.state {
@@ -138,12 +148,13 @@ impl Controller {
             1 => {
                 self.update_tile(&x, &y, Empty);
                 self.robot_pos = (x, y);
+                let d = self.update_dist(x,y);
             },
             2 => {
                 self.update_tile(&x, &y, OxygenSystem);
                 self.robot_pos = (x, y);
-                let d = self.update_dist(x,y);
-                println!("Dist: {}", d);
+                self.set_dist(x,y, 0);
+                //println!("Dist: {}", d);
                 //panic!("Done");
 
             },
@@ -195,7 +206,8 @@ fn main() {
 
     let mut count = 0;
     loop {
-        if count % 1000 == 0 {
+        if count % 10000 == 0 {
+            println!("Max is: {}", controller.get_max_dist());
             //print!("{}[2J", 27 as char);
             //controller.print();
         }

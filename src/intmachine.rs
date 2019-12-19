@@ -185,12 +185,13 @@ fn split_and_parse(s :&str) -> Vec<Word> {
    return split.map(|x| x.parse::<Word>().unwrap()).collect();
 }
 
-pub fn execute_with_result(initial: Memory, in_data: Vec<Word>) -> OutputData {
+pub fn execute_with_result(initial: &Memory, in_data: Vec<Word>) -> OutputData {
     let (input, pin): (SyncSender<Message>, Receiver<Message>) = mpsc::sync_channel(0);
     let (pout, output): (SyncSender<Message>, Receiver<Message>) = mpsc::sync_channel(0);
+    let mem = initial.clone();
 
     let child = thread::spawn(move || {
-        execute(&initial.clone(), pin, pout);
+        execute(&mem, pin, pout);
     });
     let mut inp = VecDeque::from(in_data);
 
@@ -267,7 +268,7 @@ fn execute_step(mut mem: &mut Memory, mut state: &mut ProcessorState, io: &mut I
         },
         Output {src} => {
             let val = load(&mem, &state, src);
-        //    println!("Output: {}", val);
+//            println!("Output: {}", val);
             io.stdout.send(Message::Data(val));
             state.ip += 2;
         }
@@ -305,6 +306,7 @@ fn execute_step(mut mem: &mut Memory, mut state: &mut ProcessorState, io: &mut I
             let val1 = load(&mem, &state, op1);
             let val2 = load(&mem, &state, op2);
             let result;
+//            print!("Comparing: {} and {}", val1, val2);
             if val1 == val2 {
                 result = 1;
             } else {
@@ -315,7 +317,7 @@ fn execute_step(mut mem: &mut Memory, mut state: &mut ProcessorState, io: &mut I
         }
         Halt => {
             io.stdout.send(Message::Shutdown);
-            //    println!("Halt!");
+//            println!("Halt!");
             return true;
         },
         AdjustRelativeBase { op } => {
@@ -348,36 +350,36 @@ mod tests {
 
     #[test]
     fn testIO() {
-        assert_eq!(execute_with_result(vec![3,0,4,0,99], vec![73]), vec![73]);
+        assert_eq!(execute_with_result(&vec![3,0,4,0,99], vec![73]), vec![73]);
     }
 
     #[test]
     fn test_comparision() {
         // Using position mode, consider whether the input is equal to 8; output 1 (if it is) or 0 (if it is not).
-        assert_eq!(execute_with_result(vec![3,9,8,9,10,9,4,9,99,-1,8], vec![8]), vec![1]);
-        assert_eq!(execute_with_result(vec![3,9,8,9,10,9,4,9,99,-1,8], vec![7]), vec![0]);
-        assert_eq!(execute_with_result(vec![3,9,8,9,10,9,4,9,99,-1,8], vec![9]), vec![0]);
+        assert_eq!(execute_with_result(&vec![3,9,8,9,10,9,4,9,99,-1,8], vec![8]), vec![1]);
+        assert_eq!(execute_with_result(&vec![3,9,8,9,10,9,4,9,99,-1,8], vec![7]), vec![0]);
+        assert_eq!(execute_with_result(&vec![3,9,8,9,10,9,4,9,99,-1,8], vec![9]), vec![0]);
         // Using position mode, consider whether the input is less than 8; output 1 (if it is) or 0 (if it is not).
-        assert_eq!(execute_with_result(vec![3,9,7,9,10,9,4,9,99,-1,8], vec![8]), vec![0]);
-        assert_eq!(execute_with_result(vec![3,9,7,9,10,9,4,9,99,-1,8], vec![7]), vec![1]);
-        assert_eq!(execute_with_result(vec![3,9,7,9,10,9,4,9,99,-1,8], vec![9]), vec![0]);
+        assert_eq!(execute_with_result(&vec![3,9,7,9,10,9,4,9,99,-1,8], vec![8]), vec![0]);
+        assert_eq!(execute_with_result(&vec![3,9,7,9,10,9,4,9,99,-1,8], vec![7]), vec![1]);
+        assert_eq!(execute_with_result(&vec![3,9,7,9,10,9,4,9,99,-1,8], vec![9]), vec![0]);
         // Using immediate mode, consider whether the input is equal to 8; output 1 (if it is) or 0 (if it is not).
-        assert_eq!(execute_with_result(vec![3,3,1108,-1,8,3,4,3,99], vec![7]), vec![0]);
-        assert_eq!(execute_with_result(vec![3,3,1108,-1,8,3,4,3,99], vec![8]), vec![1]);
-        assert_eq!(execute_with_result(vec![3,3,1108,-1,8,3,4,3,99], vec![9]), vec![0]);
+        assert_eq!(execute_with_result(&vec![3,3,1108,-1,8,3,4,3,99], vec![7]), vec![0]);
+        assert_eq!(execute_with_result(&vec![3,3,1108,-1,8,3,4,3,99], vec![8]), vec![1]);
+        assert_eq!(execute_with_result(&vec![3,3,1108,-1,8,3,4,3,99], vec![9]), vec![0]);
         // Using immediate mode, consider whether the input is less than 8; output 1 (if it is) or 0 (if it is not).
-        assert_eq!(execute_with_result(vec![3,3,1107,-1,8,3,4,3,99], vec![7]), vec![1]);
-        assert_eq!(execute_with_result(vec![3,3,1107,-1,8,3,4,3,99], vec![8]), vec![0]);
-        assert_eq!(execute_with_result(vec![3,3,1107,-1,8,3,4,3,99], vec![9]), vec![0]);
+        assert_eq!(execute_with_result(&vec![3,3,1107,-1,8,3,4,3,99], vec![7]), vec![1]);
+        assert_eq!(execute_with_result(&vec![3,3,1107,-1,8,3,4,3,99], vec![8]), vec![0]);
+        assert_eq!(execute_with_result(&vec![3,3,1107,-1,8,3,4,3,99], vec![9]), vec![0]);
     }
 
     #[test]
     fn test_jumps() {
         // Here are some jump tests that take an input, then output 0 if the input was zero or 1 if the input was non-zero:
-        assert_eq!(execute_with_result(vec![3,12,6,12,15,1,13,14,13,4,13,99,-1,0,1,9], vec![9]), vec![1]);
-        assert_eq!(execute_with_result(vec![3,12,6,12,15,1,13,14,13,4,13,99,-1,0,1,9], vec![0]), vec![0]);
-        assert_eq!(execute_with_result(vec![3,3,1105,-1,9,1101,0,0,12,4,12,99,1], vec![9]), vec![1]);
-        assert_eq!(execute_with_result(vec![3,3,1105,-1,9,1101,0,0,12,4,12,99,1], vec![0]), vec![0]);
+        assert_eq!(execute_with_result(&vec![3,12,6,12,15,1,13,14,13,4,13,99,-1,0,1,9], vec![9]), vec![1]);
+        assert_eq!(execute_with_result(&vec![3,12,6,12,15,1,13,14,13,4,13,99,-1,0,1,9], vec![0]), vec![0]);
+        assert_eq!(execute_with_result(&vec![3,3,1105,-1,9,1101,0,0,12,4,12,99,1], vec![9]), vec![1]);
+        assert_eq!(execute_with_result(&vec![3,3,1105,-1,9,1101,0,0,12,4,12,99,1], vec![0]), vec![0]);
     }
 
 
@@ -385,28 +387,28 @@ mod tests {
     fn test_complex() {
         let program = vec![3, 21, 1008, 21, 8, 20, 1005, 20, 22, 107, 8, 21, 20, 1006, 20, 31, 1106, 0, 36, 98, 0, 0, 1002, 21, 125, 20, 4, 20, 1105, 1, 46, 104, 999, 1105, 1, 46, 1101, 1000, 1, 20, 4, 20, 1105, 1, 46, 98, 99];
 
-        assert_eq!(execute_with_result(program.clone(), vec![8]), vec![1000]);
-        assert_eq!(execute_with_result(program.clone(), vec![9]), vec![1001]);
-        assert_eq!(execute_with_result(program.clone(), vec![7]), vec![999]);
+        assert_eq!(execute_with_result(&program, vec![8]), vec![1000]);
+        assert_eq!(execute_with_result(&program, vec![9]), vec![1001]);
+        assert_eq!(execute_with_result(&program, vec![7]), vec![999]);
     }
 
     #[test]
     fn test_indirect() {
         let program = vec![109, 1, 204, -1, 1001, 100, 1, 100, 1008, 100, 16, 101, 1006, 101, 0, 99];
         let expected = program.clone();
-        assert_eq!(execute_with_result(program, vec![]), expected);
+        assert_eq!(execute_with_result(&program, vec![]), expected);
     }
 
     #[test]
     fn test_large_number() {
         let program = vec![1102,34915192,34915192,7,4,7,99,0];
-        let result = execute_with_result(program, vec![]);
+        let result = execute_with_result(&program, vec![]);
         let s = result[0].to_string();
         assert_eq!(s.len(), 16);
     }
     #[test]
     fn test_large_number2() {
         let program2 = vec![104,1125899906842624,99];
-        assert_eq!(execute_with_result(program2, vec![]), vec![1125899906842624]);
+        assert_eq!(execute_with_result(&program2, vec![]), vec![1125899906842624]);
     }
 }

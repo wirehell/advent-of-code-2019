@@ -106,7 +106,7 @@ struct ArcadeCabinet {
 
 impl ArcadeCabinet {
     fn new() -> ArcadeCabinet {
-        let screen = Screen::new(50, 25);
+        let screen = Screen::new(80, 43);
         return ArcadeCabinet {
             screen,
             state: ArcadeState::ReadX,
@@ -129,6 +129,11 @@ impl ArcadeCabinet {
                     self.screen.draw(Tile::from(v), &x, &y);
                 }
                 self.state = ReadX;
+                if v == 4 {
+                    print!("{}[2J", 27 as char);
+                    self.print();
+                }
+
             }
         }
     }
@@ -176,7 +181,7 @@ fn main() {
             Ok(message) => {
                 match message {
                     Message::Data(data) =>  {
-               //         arcade.output(data);
+                        arcade.output(data);
 
                     }
 
