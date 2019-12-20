@@ -1,0 +1,118 @@
+graph {
+    0 [label="MapNode { x: 39, y: 39, location: Start }"]
+    1 [label="MapNode { x: 41, y: 39, location: Start }"]
+    2 [label="MapNode { x: 39, y: 41, location: Start }"]
+    3 [label="MapNode { x: 41, y: 41, location: Start }"]
+    84 [label="MapNode { x: 49, y: 39, location: Empty }"]
+    126 [label="MapNode { x: 29, y: 37, location: Key('c') }"]
+    135 [label="MapNode { x: 53, y: 41, location: Empty }"]
+    187 [label="MapNode { x: 57, y: 37, location: Empty }"]
+    202 [label="MapNode { x: 57, y: 44, location: Door('c') }"]
+    283 [label="MapNode { x: 51, y: 33, location: Key('r') }"]
+    286 [label="MapNode { x: 39, y: 65, location: Empty }"]
+    297 [label="MapNode { x: 38, y: 65, location: Door('r') }"]
+    438 [label="MapNode { x: 37, y: 73, location: Key('l') }"]
+    601 [label="MapNode { x: 41, y: 17, location: Empty }"]
+    602 [label="MapNode { x: 79, y: 31, location: Key('w') }"]
+    651 [label="MapNode { x: 18, y: 37, location: Door('w') }"]
+    685 [label="MapNode { x: 79, y: 49, location: Empty }"]
+    779 [label="MapNode { x: 75, y: 53, location: Key('b') }"]
+    1045 [label="MapNode { x: 69, y: 43, location: Key('t') }"]
+    1052 [label="MapNode { x: 3, y: 30, location: Door('t') }"]
+    1141 [label="MapNode { x: 1, y: 33, location: Empty }"]
+    1321 [label="MapNode { x: 1, y: 39, location: Key('o') }"]
+    1485 [label="MapNode { x: 69, y: 41, location: Key('j') }"]
+    1636 [label="MapNode { x: 8, y: 27, location: Door('j') }"]
+    1704 [label="MapNode { x: 75, y: 27, location: Key('s') }"]
+    1905 [label="MapNode { x: 41, y: 77, location: Key('y') }"]
+    1940 [label="MapNode { x: 55, y: 2, location: Door('y') }"]
+    1996 [label="MapNode { x: 59, y: 1, location: Key('q') }"]
+    2161 [label="MapNode { x: 53, y: 77, location: Key('n') }"]
+    2204 [label="MapNode { x: 69, y: 4, location: Door('n') }"]
+    2316 [label="MapNode { x: 61, y: 77, location: Key('i') }"]
+    2346 [label="MapNode { x: 73, y: 2, location: Door('i') }"]
+    2427 [label="MapNode { x: 7, y: 5, location: Key('f') }"]
+    2465 [label="MapNode { x: 78, y: 7, location: Door('f') }"]
+    2487 [label="MapNode { x: 77, y: 9, location: Key('a') }"]
+    2511 [label="MapNode { x: 74, y: 79, location: Door('a') }"]
+    2553 [label="MapNode { x: 79, y: 75, location: Key('p') }"]
+    2633 [label="MapNode { x: 5, y: 42, location: Door('p') }"]
+    2639 [label="MapNode { x: 73, y: 69, location: Empty }"]
+    2659 [label="MapNode { x: 75, y: 67, location: Key('g') }"]
+    2685 [label="MapNode { x: 1, y: 44, location: Door('g') }"]
+    2708 [label="MapNode { x: 1, y: 49, location: Empty }"]
+    2743 [label="MapNode { x: 73, y: 65, location: Key('x') }"]
+    2789 [label="MapNode { x: 65, y: 63, location: Empty }"]
+    2792 [label="MapNode { x: 4, y: 57, location: Door('x') }"]
+    2813 [label="MapNode { x: 65, y: 59, location: Key('k') }"]
+    2876 [label="MapNode { x: 1, y: 68, location: Door('k') }"]
+    2899 [label="MapNode { x: 67, y: 55, location: Key('d') }"]
+    2918 [label="MapNode { x: 6, y: 77, location: Door('d') }"]
+    2969 [label="MapNode { x: 63, y: 63, location: Key('h') }"]
+    3000 [label="MapNode { x: 5, y: 72, location: Door('h') }"]
+    3042 [label="MapNode { x: 3, y: 69, location: Key('z') }"]
+    3055 [label="MapNode { x: 63, y: 66, location: Door('z') }"]
+    3086 [label="MapNode { x: 21, y: 77, location: Key('m') }"]
+    3103 [label="MapNode { x: 70, y: 71, location: Door('m') }"]
+    3120 [label="MapNode { x: 21, y: 69, location: Key('v') }"]
+    3131 [label="MapNode { x: 59, y: 72, location: Door('v') }"]
+    3141 [label="MapNode { x: 57, y: 69, location: Key('e') }"]
+    3158 [label="MapNode { x: 26, y: 67, location: Door('e') }"]
+    3176 [label="MapNode { x: 21, y: 65, location: Key('u') }"]
+    1 -- 84
+    3 -- 135
+    187 -- 84
+    135 -- 202
+    187 -- 283
+    286 -- 2
+    286 -- 297
+    438 -- 286
+    601 -- 84
+    187 -- 602
+    651 -- 0
+    202 -- 685
+    779 -- 685
+    651 -- 1052
+    1045 -- 685
+    1052 -- 1141
+    1321 -- 1141
+    1045 -- 1485
+    1141 -- 1636
+    0 -- 126
+    602 -- 1704
+    135 -- 1905
+    1940 -- 601
+    1996 -- 1940
+    1905 -- 2161
+    2204 -- 601
+    2161 -- 2316
+    2346 -- 2204
+    1636 -- 2427
+    2465 -- 2346
+    2465 -- 2487
+    2511 -- 2316
+    297 -- 2633
+    2511 -- 2553
+    2639 -- 2553
+    2639 -- 2659
+    2685 -- 2633
+    2685 -- 2708
+    2743 -- 2639
+    2789 -- 2743
+    2708 -- 2792
+    2789 -- 2813
+    2876 -- 2792
+    2899 -- 2789
+    2918 -- 2876
+    2969 -- 2899
+    3000 -- 2918
+    3000 -- 3042
+    3055 -- 2969
+    2708 -- 3086
+    3103 -- 3055
+    3086 -- 3120
+    3131 -- 3103
+    3131 -- 3141
+    3120 -- 3158
+    3158 -- 3176
+}

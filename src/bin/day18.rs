@@ -85,7 +85,7 @@ type RawMap = Vec<Vec<char>>;
 
 fn main() {
 //    let filename = "data/day18/test5.map";
-    let filename = "data/day18/input.txt";
+    let filename = "data/day18/input2.txt";
     let raw_map = read_file(filename);
 
     let mut keys = HashMap::new();
@@ -93,20 +93,25 @@ fn main() {
     let mut graph :StableGraph<MapNode, i32, Undirected> = StableGraph::default();
     let mut pos_to_node = HashMap::new();
 
-    let (sx, sy) = find_myself(&raw_map);
+    let bots = find_myself(&raw_map);
 
     let mut q = VecDeque::new();
     let mut visited = HashSet::new();
 
-    let initial = MapNode {
-        x: sx,
-        y: sy,
-        location: Location::Start
-    };
-    let start_node = graph.add_node(initial.clone());
-    pos_to_node.insert(initial.get_pos(), start_node.clone());
+    let mut initial_bot_pos = vec![];
 
-    q.push_back(initial.get_pos());
+    for b in bots {
+        let (sx, sy) = b;
+        let initial = MapNode {
+            x: sx,
+            y: sy,
+            location: Location::Start
+        };
+        let start_node = graph.add_node(initial.clone());
+        pos_to_node.insert(initial.get_pos(), start_node.clone());
+        q.push_back(initial.get_pos());
+        initial_bot_pos.push(start_node);
+    }
 
     while !q.is_empty() {
         let pos = q.pop_front().unwrap();
@@ -223,8 +228,10 @@ fn main() {
 
     let mut count = 0;
     let mut heap = BinaryHeap::new();
+
+    let mut pos :Vec<NodeIndex> = vec![];
     let initial = Path {
-        pos: start_node,
+        pos: initial_bot_pos,
         p: vec![],
         ks: KeySet::new(),
         estimate: 0,
@@ -242,37 +249,40 @@ fn main() {
         }
         max_depth = i32::max(max_depth, path.p.len() as i32);
         count += 1;
-//        println!("Working on: {:?}", path);
-        let reachable = find_reachable_keys(path.pos, &graph, &path.ks, &keys);
- //       println!("Reachable: {:?}", reachable);
-        let rl = reachable.len();
-        for (k, cost) in reachable {
 
-            let pos = keys[&k];
-            let previous = path.p.last();
-            if previous.is_none() || allowed_path(*previous.unwrap(), k, &path.ks) {
-                let mut new_ks: KeySet = path.ks.clone();
-                new_ks.add(k);
+        for (i, b) in path.pos.iter().enumerate() {
+
+//          println!("Working on: {:?}", path);
+            let reachable = find_reachable_keys(*b, &graph, &path.ks, &keys);
+            //       println!("Reachable: {:?}", reachable);
+            for (k, cost) in reachable {
+                let pos = keys[&k];
+                let previous = path.p.last();
+                if previous.is_none() || allowed_path((*previous.unwrap()).1, k, &path.ks) {
+                    let mut new_ks: KeySet = path.ks.clone();
+                    new_ks.add(k);
 //            let estimate = get_estimate_left(&graph, &new_ks, &keys);
-                let estimate = 0;
+                    let estimate = 0;
 //            println!("Estimate is: {}", estimate);
-                let mut p = path.p.clone();
-                p.push(k);
-                let new_path: Path = Path {
-                    pos,
-                    ks: new_ks,
-                    p,
-                    estimate,
-                    cost: path.cost + cost,
-                };
+                    let mut p = path.p.clone();
+                    p.push((i as u8, k));
+                    let mut new_pos = path.pos.clone();
+                    new_pos[i] = pos;
+                    let new_path: Path = Path {
+                        pos: new_pos,
+                        ks: new_ks,
+                        p,
+                        estimate,
+                        cost: path.cost + cost,
+                    };
 
-                heap.push(new_path);
-
+                    heap.push(new_path);
+                }
             }
         }
 
         if count % 10000 == 0 {
-            println!("Current depth: {}, cost: {}, heap: {}, reachable: {}, max_depth: {}", 0, path.cost, heap.len(), rl, max_depth);
+            println!("Current depth: {}, cost: {}, heap: {}, max_depth: {}", 0, path.cost, heap.len(), max_depth);
             println!("Path: {:?}", path);
 
         }
@@ -299,8 +309,8 @@ fn allowed_path(from: char, to: char, ks: &KeySet) -> bool {
     let forced :Vec<Vec<char>> = vec![
         vec!['b','t','j'],
         vec!['r','w','s'],
-        vec!['z', 'm','v'],
-        vec!['f','o'],
+ //       vec!['z', 'm','v'],
+  //      vec!['f','o'],
         vec!['p', 'g', 'x', 'k', 'd', 'h']
     ];
 
@@ -313,12 +323,10 @@ fn allowed_path(from: char, to: char, ks: &KeySet) -> bool {
     return true;
 }
 
-
-
 #[derive(Eq, PartialEq, Debug, Clone)]
 struct Path {
-    pos: NodeIndex,
-    p: Vec<char>,
+    pos: Vec<NodeIndex>,
+    p: Vec<(u8, char)>,
     ks: KeySet,
     estimate: i32,
     cost: i32,
@@ -414,16 +422,16 @@ fn read_file(filename: &str) -> RawMap {
     return map;
 }
 
-fn find_myself(map :&RawMap) -> (i32, i32) {
+fn find_myself(map :&RawMap) -> Vec<(i32, i32)> {
+    let mut bots = vec![];
     for (y, line) in map.iter().enumerate() {
        for (x, char) in line.iter().enumerate() {
            if *char == '@' {
-               return (x as i32, y as i32);
+               bots.push((x as i32, y as i32));
            }
-
        }
     }
-    panic!("Could not find myself");
+    return bots;
 }
 
 
