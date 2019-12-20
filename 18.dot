@@ -1,0 +1,136 @@
+graph {
+    0 [label="MapNode { x: 40, y: 40, location: Start }"]
+    1 [label="MapNode { x: 40, y: 39, location: Empty }"]
+    2 [label="MapNode { x: 40, y: 41, location: Empty }"]
+    3 [label="MapNode { x: 41, y: 40, location: Empty }"]
+    4 [label="MapNode { x: 39, y: 40, location: Empty }"]
+    5 [label="MapNode { x: 41, y: 39, location: Empty }"]
+    6 [label="MapNode { x: 39, y: 39, location: Empty }"]
+    7 [label="MapNode { x: 41, y: 41, location: Empty }"]
+    8 [label="MapNode { x: 39, y: 41, location: Empty }"]
+    87 [label="MapNode { x: 49, y: 39, location: Empty }"]
+    133 [label="MapNode { x: 29, y: 37, location: Key('c') }"]
+    138 [label="MapNode { x: 53, y: 41, location: Empty }"]
+    189 [label="MapNode { x: 57, y: 37, location: Empty }"]
+    205 [label="MapNode { x: 57, y: 44, location: Door('c') }"]
+    286 [label="MapNode { x: 51, y: 33, location: Key('r') }"]
+    294 [label="MapNode { x: 39, y: 65, location: Empty }"]
+    306 [label="MapNode { x: 38, y: 65, location: Door('r') }"]
+    448 [label="MapNode { x: 37, y: 73, location: Key('l') }"]
+    604 [label="MapNode { x: 41, y: 17, location: Empty }"]
+    605 [label="MapNode { x: 79, y: 31, location: Key('w') }"]
+    660 [label="MapNode { x: 18, y: 37, location: Door('w') }"]
+    689 [label="MapNode { x: 79, y: 49, location: Empty }"]
+    781 [label="MapNode { x: 75, y: 53, location: Key('b') }"]
+    1047 [label="MapNode { x: 69, y: 43, location: Key('t') }"]
+    1062 [label="MapNode { x: 3, y: 30, location: Door('t') }"]
+    1151 [label="MapNode { x: 1, y: 33, location: Empty }"]
+    1332 [label="MapNode { x: 1, y: 39, location: Key('o') }"]
+    1488 [label="MapNode { x: 69, y: 41, location: Key('j') }"]
+    1645 [label="MapNode { x: 8, y: 27, location: Door('j') }"]
+    1706 [label="MapNode { x: 75, y: 27, location: Key('s') }"]
+    1909 [label="MapNode { x: 41, y: 77, location: Key('y') }"]
+    1943 [label="MapNode { x: 55, y: 2, location: Door('y') }"]
+    1999 [label="MapNode { x: 59, y: 1, location: Key('q') }"]
+    2164 [label="MapNode { x: 53, y: 77, location: Key('n') }"]
+    2207 [label="MapNode { x: 69, y: 4, location: Door('n') }"]
+    2317 [label="MapNode { x: 61, y: 77, location: Key('i') }"]
+    2349 [label="MapNode { x: 73, y: 2, location: Door('i') }"]
+    2433 [label="MapNode { x: 7, y: 5, location: Key('f') }"]
+    2469 [label="MapNode { x: 78, y: 7, location: Door('f') }"]
+    2491 [label="MapNode { x: 77, y: 9, location: Key('a') }"]
+    2515 [label="MapNode { x: 74, y: 79, location: Door('a') }"]
+    2556 [label="MapNode { x: 79, y: 75, location: Key('p') }"]
+    2639 [label="MapNode { x: 5, y: 42, location: Door('p') }"]
+    2643 [label="MapNode { x: 73, y: 69, location: Empty }"]
+    2663 [label="MapNode { x: 75, y: 67, location: Key('g') }"]
+    2692 [label="MapNode { x: 1, y: 44, location: Door('g') }"]
+    2714 [label="MapNode { x: 1, y: 49, location: Empty }"]
+    2746 [label="MapNode { x: 73, y: 65, location: Key('x') }"]
+    2792 [label="MapNode { x: 65, y: 63, location: Empty }"]
+    2799 [label="MapNode { x: 4, y: 57, location: Door('x') }"]
+    2816 [label="MapNode { x: 65, y: 59, location: Key('k') }"]
+    2882 [label="MapNode { x: 1, y: 68, location: Door('k') }"]
+    2902 [label="MapNode { x: 67, y: 55, location: Key('d') }"]
+    2924 [label="MapNode { x: 6, y: 77, location: Door('d') }"]
+    2971 [label="MapNode { x: 63, y: 63, location: Key('h') }"]
+    3006 [label="MapNode { x: 5, y: 72, location: Door('h') }"]
+    3049 [label="MapNode { x: 3, y: 69, location: Key('z') }"]
+    3059 [label="MapNode { x: 63, y: 66, location: Door('z') }"]
+    3092 [label="MapNode { x: 21, y: 77, location: Key('m') }"]
+    3107 [label="MapNode { x: 70, y: 71, location: Door('m') }"]
+    3126 [label="MapNode { x: 21, y: 69, location: Key('v') }"]
+    3135 [label="MapNode { x: 59, y: 72, location: Door('v') }"]
+    3145 [label="MapNode { x: 57, y: 69, location: Key('e') }"]
+    3164 [label="MapNode { x: 26, y: 67, location: Door('e') }"]
+    3182 [label="MapNode { x: 21, y: 65, location: Key('u') }"]
+    0 -- 1
+    0 -- 2
+    0 -- 3
+    0 -- 4
+    1 -- 5
+    1 -- 6
+    2 -- 7
+    2 -- 8
+    3 -- 5
+    3 -- 7
+    4 -- 6
+    4 -- 8
+    5 -- 87
+    7 -- 138
+    189 -- 87
+    138 -- 205
+    189 -- 286
+    294 -- 8
+    294 -- 306
+    448 -- 294
+    604 -- 87
+    189 -- 605
+    660 -- 6
+    205 -- 689
+    781 -- 689
+    660 -- 1062
+    1047 -- 689
+    1062 -- 1151
+    1332 -- 1151
+    1047 -- 1488
+    1151 -- 1645
+    6 -- 133
+    138 -- 1909
+    605 -- 1706
+    1943 -- 604
+    1999 -- 1943
+    1909 -- 2164
+    2207 -- 604
+    2164 -- 2317
+    2349 -- 2207
+    1645 -- 2433
+    2469 -- 2349
+    2469 -- 2491
+    2515 -- 2317
+    306 -- 2639
+    2515 -- 2556
+    2643 -- 2556
+    2643 -- 2663
+    2692 -- 2639
+    2692 -- 2714
+    2746 -- 2643
+    2792 -- 2746
+    2714 -- 2799
+    2792 -- 2816
+    2882 -- 2799
+    2902 -- 2792
+    2924 -- 2882
+    2971 -- 2902
+    3006 -- 2924
+    3006 -- 3049
+    3059 -- 2971
+    2714 -- 3092
+    3107 -- 3059
+    3135 -- 3107
+    3092 -- 3126
+    3135 -- 3145
+    3126 -- 3164
+    3164 -- 3182
+}
+
