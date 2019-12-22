@@ -2,31 +2,35 @@ use std::io::{BufReader, BufRead, stdout, Write};
 use std::fs::File;
 use regex::Regex;
 use std::str::FromStr;
+use num::{Integer, BigInt, ToPrimitive};
+use std::borrow::Borrow;
 
 extern crate regex;
 
-#[derive(Clone, Copy, Eq, PartialEq, Debug)]
+type Size = BigInt;
+type Pos = BigInt;
+
+#[derive(Clone, Eq, PartialEq, Debug)]
 enum Action {
     DealIntoNewStack,
-    Cut(i128),
-    DealWithIncrement(i128),
+    Cut(Pos),
+    DealWithIncrement(Pos),
 }
 
 // Encoded state first number + diff
-#[derive(Clone, Copy, Eq, PartialEq, Debug)]
+#[derive(Clone, Eq, PartialEq, Debug)]
 struct Deck {
-    first: i128,
-    diff: i128,
-    size: i128,
+    first: Pos,
+    diff: Pos,
+    size: Size,
 }
-
 
 impl Deck {
     fn new(size :u128) -> Deck {
         return Deck {
-            first: 0,
-            diff: 1,
-            size: size as i128,
+            first: Pos::from(0),
+            diff: Pos::from(1),
+            size: Size::from(size),
         };
     }
 
@@ -36,38 +40,24 @@ impl Deck {
         }
     }
 
-    // Reverse: *-1  diff*=-1
-    // Cut(n): first + diff*n, diff
-    // Take(n): self.diff = (self.diff * *n) % self.size; for primes..
-    // Answer = (self.first * 2020 * self.diff)
-
-
-    // Take 3:
-    // Take 2020
-    // Undo program n times,
-    // Undo reverse -> (val = size - val)
-    // Undo cut(n) -> (val += n)
-    // Undo take(n) ->
-    //
-
     fn apply_action(&mut self, action :&Action) {
         println!("Applying: {:?} to {:?} ({:?})", action, self, self.get_card_vec());
         match action {
             // Reverse: *-1  diff*=-1
             Action::DealIntoNewStack => {
-                self.first += (self.size - 1) * self.diff;
+                self.first += (self.size.borrow() - 1) * self.diff.borrow();
                 self.diff *= -1;
             },
             // Cut(n): first + diff*n, diff
             Action::Cut(n) => {
-                self.first = (self.first + self.diff * *n) % self.size;
+                self.first = (self.first.borrow() + self.diff.borrow() * n.borrow()) % &self.size;
             },
             // Take(n): first, diff *= (size - n)
             Action::DealWithIncrement(n) => {
                 // Find a/n for a = v+(10x)/n   for a % n == 0
-                let mut v= self.diff;
-                while v % n != 0 {
-                    v += self.size;
+                let mut v= self.diff.clone();
+                while &v % n != Pos::from(0) {
+                    v += &self.size;
                 }
                 self.diff =  v / n;
 //                self.diff = (self.diff * *n) % self.size; //for primes..
@@ -76,11 +66,12 @@ impl Deck {
     }
 
     fn get_card_vec(&self) -> Vec<i128> {
-        let mut v = Vec::with_capacity(self.size as usize);
-        let current = self.first;
-        for i in 0..self.size {
-            let val = (current + i*self.diff) % self.size;
-            v.push( (val + self.size) % self.size);
+        let size = self.size.borrow();
+        let mut v :Vec<i128> = Vec::with_capacity(size.to_usize().unwrap());
+        let current = self.first.to_i128().unwrap();
+        for i in 0..self.size.to_usize().unwrap() {
+            let val = (current + (i as i128) * self.diff.to_i128().unwrap()) % size.to_i128().unwrap();
+            v.push( (val + size.to_i128().unwrap()) % size.to_i128().unwrap());
         }
         return v;
     }
@@ -100,14 +91,14 @@ fn parse_action(s :&str) -> Action {
     }
     match cut_re.captures(s) {
         Some(m) => {
-            let val = i128::from_str(&m[1]).unwrap();
+            let val = Pos::from_str(&m[1]).unwrap();
             return Action::Cut(val)
         }
         _ => {}
     }
     match dwi_re.captures(s) {
         Some(m) => {
-            let val = i128::from_str(&m[1]).unwrap();
+            let val = Pos::from_str(&m[1]).unwrap();
             return Action::DealWithIncrement(val)
         }
         _ => {}
@@ -143,6 +134,36 @@ Take(n):
 [0  (size-n)]   [d]      [d * (size - n)]
 */
 
+// Take 3: reverse..
+
+fn reverse_one(pos: &Pos, action :Action, size: &Size) -> Pos {
+    match action {
+        Action::DealIntoNewStack => {
+            return size - 1 - pos;
+        },
+        Action::Cut(n) => {
+            return (size + pos + n) % size;
+        },
+        Action::DealWithIncrement(n) => {
+            return (pos.clone() * n.modpow(&(size - 2), &size)).mod_floor(size);
+        },
+    }
+}
+
+fn simple_reverse(pos: Pos, instructions: &Instructions, size: Size) -> Pos {
+    let mut res = pos;
+    for i in instructions.iter().rev() {
+        res = reverse_one(&res, i.clone(), &size);
+    }
+    return res;
+}
+
+// Take 2020
+// Undo program n times,
+// Undo reverse -> (val = size - 1 - val)
+// Undo cut_n(val) -> (val = (val + n) mod)
+// Undo take_n,val -> (n^(97-2) * val) mod 97
+//
 
 
 fn main() {
@@ -155,15 +176,15 @@ fn main() {
     let mut deck = Deck::new(97);
     //   let orig = deck.cards.clone();
 
-    for i in 0..10 {
+    for i in 0..13 {
         deck.apply_instructions(&instructions);
-        println!("cards: {:?}", deck.get_card_vec());
         //   if deck.cards == orig {
         //      println!("Applications: {}", i+1);
         // }
     }
 //    deck.cards.iter().position(|x| *x == 2019).unwrap();
 //    let pos = reverse_pos(2020, &instructions,119315717514047);
+    println!("cards: {:?}", deck.get_card_vec());
 
 //   println!("Position: {}", pos);
 
@@ -174,12 +195,14 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use crate::Action::{DealWithIncrement, DealIntoNewStack, Cut};
-    use crate::{parse_action, Deck, read_file};
+    use crate::{parse_action, Deck, read_file, reverse_one, simple_reverse, Pos, Size};
+    use num::{BigInt, ToPrimitive};
+
 
     #[test]
     fn test_parse_action() {
-        assert_eq!(parse_action("deal with increment 52"), DealWithIncrement(52));
-        assert_eq!(parse_action("cut -3134"), Cut(-3134));
+        assert_eq!(parse_action("deal with increment 52"), DealWithIncrement(Pos::from(52)));
+        assert_eq!(parse_action("cut -3134"), Cut(Pos::from(-3134)));
         assert_eq!(parse_action("deal into new stack"), DealIntoNewStack);
     }
 
@@ -193,28 +216,62 @@ mod tests {
     #[test]
     fn test_cut() {
         let mut deck = Deck::new(10);
-        deck.apply_action(&Cut(3));
+        deck.apply_action(&Cut(Pos::from(3)));
         assert_eq!(deck.get_card_vec(), [3, 4, 5, 6, 7, 8, 9, 0, 1, 2]);
+    }
+
+    #[test]
+    fn test_reverse_cut() {
+        let mut deck = Deck::new(97);
+        deck.apply_action(&Cut(Pos::from(3)));
+        let v = deck.get_card_vec();
+        println!("{:?}", v);
+        for x in 0..v.len() {
+            assert_eq!(deck.get_card_vec()[x], reverse_one(&Pos::from(x), Cut(Pos::from(3)), &Size::from(97)).to_i128().unwrap())
+        }
     }
 
     #[test]
     fn test_cut_negative() {
         let mut deck = Deck::new(10);
-        deck.apply_action(&Cut(-4));
+        deck.apply_action(&Cut(Pos::from(-4)));
         assert_eq!(deck.get_card_vec(), [6, 7, 8, 9, 0, 1, 2, 3, 4, 5]);
+    }
+
+    #[test]
+    fn test_reverse_cut_negative() {
+        let mut deck = Deck::new(97);
+        deck.apply_action(&Cut(Pos::from(-3)));
+        let v = deck.get_card_vec();
+        println!("{:?}", v);
+        for x in 0..v.len() {
+            assert_eq!(deck.get_card_vec()[x], reverse_one(&Pos::from(x), Cut(Pos::from(-3)), &Size::from(97)).to_i128().unwrap())
+        }
     }
 
     #[test]
     fn test_deal_with_increment() {
         let mut deck = Deck::new(10);
-        deck.apply_action(&DealWithIncrement(3));
+        deck.apply_action(&DealWithIncrement(Pos::from(3)));
         assert_eq!(deck.get_card_vec(), [0, 7, 4, 1, 8, 5, 2, 9, 6, 3]);
+    }
+
+    #[test]
+    fn test_reverse_deal_with_increment() {
+        let mut deck = Deck::new(97);
+        deck.apply_action(&DealWithIncrement(Pos::from(10)));
+        let v = deck.get_card_vec();
+        println!("{:?}", v);
+        for x in 0..v.len() {
+            println!("{:?}", x);
+            assert_eq!(deck.get_card_vec()[x], reverse_one(&Pos::from(x), DealWithIncrement(Pos::from(10)), &Size::from(97)).to_i128().unwrap())
+        }
     }
 
     #[test]
     fn test_deal_with_increment_7() {
         let mut deck = Deck::new(10);
-        deck.apply_action(&DealWithIncrement(7));
+        deck.apply_action(&DealWithIncrement(Pos::from(7)));
         assert_eq!(deck.get_card_vec(), [0, 3, 6, 9, 2, 5, 8, 1, 4, 7]);
     }
 
@@ -253,7 +310,6 @@ mod tests {
     #[test]
     fn test_part1() {
         let filename = "data/day22/input.txt";
-        println!("Reading from file: {}", filename);
         let instructions = read_file(filename);
         let mut deck = Deck::new(10007);
         deck.apply_instructions(&instructions);
@@ -261,5 +317,12 @@ mod tests {
         assert_eq!(res[1498], 2019);
     }
 
+    #[test]
+    fn test_simple_reverse() {
+        let filename = "data/day22/input.txt";
+        let instructions = read_file(filename);
+        let pos = simple_reverse(Pos::from(1498), &instructions, Size::from(10007));
+        assert_eq!(pos, Pos::from(2019));
+    }
 
 }
