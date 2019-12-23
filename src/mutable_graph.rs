@@ -1,10 +1,9 @@
 mod mutable_graph {
     use std::rc::Rc;
-    use std::borrow::{BorrowMut, Borrow};
+    use std::borrow::{Borrow};
     use std::cell::RefCell;
     use std::any::TypeId;
     use std::hash::Hash;
-    use std::collections::{HashSet, VecDeque};
     use std::fmt::Debug;
 
     type NodeList<T> = Vec<Rc<Node<T>>>;
@@ -103,7 +102,6 @@ mod mutable_graph {
 #[cfg(test)]
 mod tests {
     use crate::mutable_graph::mutable_graph::Graph;
-    use std::borrow::Borrow;
 
     #[test]
     fn test_simple() {

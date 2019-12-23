@@ -1,9 +1,7 @@
-use std::env;
-
 use Instruction::{Halt, Add, Multiply, Input, Output, JumpIfTrue, JumpIfFalse, LessThan, Equals, AdjustRelativeBase};
 use Parameter::{Imm, Pos, Rel};
 use std::collections::VecDeque;
-use std::sync::mpsc::{Receiver, SyncSender, Sender};
+use std::sync::mpsc::{Receiver, SyncSender};
 use std::sync::mpsc;
 use std::thread;
 use std::io::{Write, stdout};
@@ -14,8 +12,8 @@ use crate::intmachine::Message::RequestInput;
 pub type Word = i64;
 pub type Memory = Vec<Word>;
 type OutputData = Vec<Word>;
-type InputData = VecDeque<Word>;
 
+#[derive(Debug)]
 pub enum Message {
     Shutdown,
     Data(Word),
@@ -29,15 +27,30 @@ struct ProcessorState {
     relative_base: Word,
 }
 
-struct IO {
+pub trait IO {
+    fn send(&mut self, message: Message) -> ();
+    fn receive(&mut self) -> Message;
+}
+
+struct StandardIO {
     stdin: Receiver<Message>,
     stdout: SyncSender<Message>,
+}
+
+impl IO for StandardIO {
+    fn send(&mut self, message: Message) {
+        self.stdout.send(message).unwrap();
+    }
+
+    fn receive(&mut self) -> Message {
+        return self.stdin.recv().unwrap();
+    }
 }
 
 struct IntMachine {
     memory: Memory,
     state: ProcessorState,
-    io: IO,
+    io: dyn IO,
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -191,7 +204,11 @@ pub fn execute_with_result(initial: &Memory, in_data: Vec<Word>) -> OutputData {
     let mem = initial.clone();
 
     let child = thread::spawn(move || {
-        execute(&mem, pin, pout);
+        let mut io = StandardIO {
+            stdin: pin,
+            stdout: pout,
+        };
+        execute(&mem, &mut io);
     });
     let mut inp = VecDeque::from(in_data);
 
@@ -203,7 +220,7 @@ pub fn execute_with_result(initial: &Memory, in_data: Vec<Word>) -> OutputData {
                     Message::Data(data) => result.push(data),
                     Message::RequestInput => {
                         let data = inp.pop_front().unwrap();
-                        input.send(Message::Data(data));
+                        input.send(Message::Data(data)).unwrap();
                     },
                     Message::Shutdown => break,
                 }
@@ -213,30 +230,36 @@ pub fn execute_with_result(initial: &Memory, in_data: Vec<Word>) -> OutputData {
             }
         }
     }
-    child.join();
+    child.join().unwrap_err();
     return result;
 }
 
+/*
+pub fn execute(initial: &Memory, network_receive: Receiver<Message>, network_send: SyncSender<Message>) {
 
-pub fn execute(initial: &Memory, stdin: Receiver<Message>, stdout: SyncSender<Message>) -> (Memory) {
+
+
+}
+*/
+
+pub fn execute(initial: &Memory, io: &mut dyn IO) -> (Memory) {
 
     const LEN :i64 = 640 * 1024 * 1024; // Should be enough..
     let mut mem = vec![0; LEN as usize];
     for i in 0..initial.len() {
         mem[i] = initial[i];
     }
-    let mut io = IO { stdin, stdout };
     let mut state = ProcessorState { ip: 0, relative_base: 0 };
 
     loop {
-        if execute_step(&mut mem, &mut state, &mut io) {
+        if execute_step(&mut mem, &mut state, io) {
             break;
         }
     }
     return mem;
 
 }
-fn execute_step(mut mem: &mut Memory, mut state: &mut ProcessorState, io: &mut IO) -> bool{
+fn execute_step(mut mem: &mut Memory, mut state: &mut ProcessorState, io: &mut dyn IO) -> bool{
 
     let instruction = decode_instruction(&state.ip, &mem);
 //    println!("Executing: {:?} {:?}", state, instruction);
@@ -258,9 +281,9 @@ fn execute_step(mut mem: &mut Memory, mut state: &mut ProcessorState, io: &mut I
             state.ip += 4;
         },
         Input {dst} => {
-            io.stdout.send(RequestInput);
-            let val = match io.stdin.recv() {
-                Ok(Message::Data(data)) => data,
+            io.send(RequestInput);
+            let val = match io.receive() {
+                Message::Data(data) => data,
                 x => panic!(x),
             };
             write(&mut mem, &state, val, dst);
@@ -269,7 +292,7 @@ fn execute_step(mut mem: &mut Memory, mut state: &mut ProcessorState, io: &mut I
         Output {src} => {
             let val = load(&mem, &state, src);
 //            println!("Output: {}", val);
-            io.stdout.send(Message::Data(val));
+            io.send(Message::Data(val));
             state.ip += 2;
         }
         JumpIfTrue { cond, target } => {
@@ -316,7 +339,7 @@ fn execute_step(mut mem: &mut Memory, mut state: &mut ProcessorState, io: &mut I
             state.ip += 4
         }
         Halt => {
-            io.stdout.send(Message::Shutdown);
+            io.send(Message::Shutdown);
 //            println!("Halt!");
             return true;
         },
