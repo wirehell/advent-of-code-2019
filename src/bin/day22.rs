@@ -2,7 +2,7 @@ use std::io::{BufReader, BufRead, stdout, Write};
 use std::fs::File;
 use regex::Regex;
 use std::str::FromStr;
-use num::{Integer, BigInt, ToPrimitive, Zero, One};
+use num::{Integer, BigInt, ToPrimitive, Zero, One, Signed};
 use std::borrow::Borrow;
 use std::ops::BitAnd;
 
@@ -141,7 +141,7 @@ Take(n):
 // Undo cut_n(val) -> (val = (val + n) mod)
 // Undo take_n,val -> (n^(97-2) * val) mod 97
 //
-fn reverse_one(pos: &Pos, action :Action, size: &Size) -> Pos {
+fn reverse_one(pos: &Pos, action :&Action, size: &Size) -> Pos {
     match action {
         Action::DealIntoNewStack => {
             return size - 1 - pos;
@@ -158,7 +158,7 @@ fn reverse_one(pos: &Pos, action :Action, size: &Size) -> Pos {
 // All transformations is on form x(k) = a*x(k-1) + b
 type Transform = (BigInt, BigInt);
 
-fn extract_transform(instructions: &Instructions, size: BigInt) -> Transform {
+fn extract_transform(instructions: &Instructions, size: &BigInt) -> Transform {
     let mut transform: Transform = (BigInt::one(), BigInt::zero());
     for i in instructions.iter() {
 //        println!("Transform: {:?} for: {:?}", transform, i);
@@ -167,7 +167,7 @@ fn extract_transform(instructions: &Instructions, size: BigInt) -> Transform {
             Action::DealIntoNewStack => {
                 // x(k) = -x(k-1) + (1 - size)
                 let a = -1 * transform.0.borrow();
-                let b = -1 * transform.1.borrow() + (1 - size.borrow());
+                let b = -1 * transform.1.borrow() + size.borrow() - BigInt::one();
                 transform = (a, b);
             },
             Action::Cut(n) => {
@@ -184,63 +184,72 @@ fn extract_transform(instructions: &Instructions, size: BigInt) -> Transform {
             },
         }
     }
-    println!("Returning transform: {:?}", transform);
+//    println!("Returning transform: {:?}", transform);
     return transform;
 }
 
-  fn reverse(pos: BigInt, n: BigInt, size: BigInt, transform: Transform) -> BigInt {
-      let a = transform.0.borrow();
-      let b = transform.1.borrow();
-      /*
-      Repeated ^n by continuous substitution which yields;
-      x(k) ≅ a^n * x(0) + b + b*a + b*a^2 + .. + b*a^(n-1) . This is a geomerics series, for a!=0
-      x(k) ≅ a^n * x(0) + b*(a^n-1) * 1/(a-1)
-      if a=1 and n !=0
-      x(k) ≅ a^n * x(0) + b + b + b + .. + b . This
 
-      Fermats little theorem says that x^(n-1) ≅ 1 (mod n if n is prime), insert (1-a) as x
-      x(k) ≅ a^n * x(0) + b*(a^n-1) * (a-1)^(size-1)/(a-1)
-      x(k) ≅ a^n * x(0) + b*(a^n-1) * (a-1)^(size-2)
-             ----         --------------------------
-             repeated_a         repeated_b
-      */
+fn repeat_transform(transform: &Transform, n: &BigInt, size: &BigInt) -> Transform {
+    // Adjust to positive numbers.
+    let adj_a :BigInt = (transform.0.borrow() / size.borrow() + BigInt::one()).abs() * size.borrow();
+    let adj_b :BigInt = (transform.0.borrow() / size.borrow() + BigInt::one()).abs() * size.borrow();
 
-      let repeated_a;
-      let repeated_b;
+    let a = transform.0.borrow() + adj_a;
+    let b = transform.1.borrow() + adj_b;
+    /*
+    Repeated ^n by continuous substitution which yields;
+    x(k) ≅ a^n * x(0) + b + b*a + b*a^2 + .. + b*a^(n-1) . This is a geomeric series, for a!=0
+    x(k) ≅ a^n * x(0) + b*(a^n-1) * 1/(a-1)
+    if a=1 and n !=0
+    x(k) ≅ a^n * x(0) + b + b + b + .. + b . This
 
-      if n.borrow() == &BigInt::one() {
-          println!("Warning");
-          repeated_a = a.clone();
-          repeated_b = b.clone();
-      } else {
-          assert_ne!(a, &BigInt::one()); // Need different formula for a==1 (don't think we need that though..)
-          repeated_a = a.modpow(n.borrow(), size.borrow());
+    Fermats little theorem says that x^(n-1) ≅ 1 (mod n if n is prime), insert (1-a) as x
+    x(k) ≅ a^n * x(0) + b*(a^n-1) * (a-1)^(size-1)/(a-1)
+    x(k) ≅ a^n * x(0) + b*(a^n-1) * (a-1)^(size-2)
+           ----         --------------------------
+           repeated_a         repeated_b
+    */
 
-          if a.borrow() != &BigInt::one() {
-              println!("Normal");
-              // b*(a^n-1) * (a-1)^(size-2)
-              repeated_b = b * &(a.modpow(&n.borrow() , size.borrow()) - BigInt::one().borrow()) *
-                  (a - BigInt::one()).modpow(&(size.borrow() - BigInt::from(2)), size.borrow());
-          } else {
-              println!("Warning 2");
-              repeated_b = n * b;
-          }
-      }
+    let repeated_a;
+    let repeated_b;
 
-      println!("a: {:?}, b: {:?}", a, b);
-      println!("ra: {:?}, rb: {:?}", repeated_a, repeated_b);
+    if n.borrow() == &BigInt::one() {
+        println!("Warning");
+        repeated_a = a.clone();
+        repeated_b = b.clone();
+    } else {
+//        assert_ne!(a, &BigInt::one()); // Need different formula for a==1 (don't think we need that though..)
+        repeated_a = a.modpow(n.borrow(), size.borrow());
 
-      // Now we solve x(k) ≅ a*x(0) + b (mod size)
-      // This has the solution x(0) = a^(size-2) * (x(k) - b)
-      let x0 = (repeated_a.modpow(&(size.borrow() - BigInt::from(2)), size.borrow()) * (pos - repeated_b)).mod_floor(size.borrow());
-      return x0;
+        if a.borrow() != &BigInt::one() {
+            println!("Normal");
+            // b*(a^n-1) * (a-1)^(size-2)
+            repeated_b = b.borrow() * &(a.modpow(&n.borrow() , size.borrow()) - BigInt::one().borrow()) *
+                (a - BigInt::one()).modpow(&(size.borrow() - BigInt::from(2)), size.borrow());
+        } else {
+            println!("Warning 2");
+            repeated_b = n * b.borrow();
+        }
+    }
+    println!("ra: {:?}, rb: {:?}", repeated_a, repeated_b);
+    return (repeated_a, repeated_b);
+
+}
+
+fn reverse(pos: &BigInt, n: &BigInt, size: &BigInt, transform: &Transform) -> BigInt {
+
+    // Now we solve x(k) ≅ a*x(0) + b (mod size)
+    // This has the solution x(0) = a^(size-2) * (x(k) - b)
+    let (repeated_a, repeated_b) = repeat_transform(&transform, &n, size.borrow());
+    let x0 = (repeated_a.modpow(&(size.borrow() - BigInt::from(2)), size.borrow()) * (pos - repeated_b));//.mod_floor(size.borrow());
+    return x0;
 }
 
 
-fn simple_reverse(pos: Pos, instructions: &Instructions, size: Size) -> Pos {
-    let mut res = pos;
+fn simple_reverse(pos: &Pos, instructions: &Instructions, size: &Size) -> Pos {
+    let mut res :Pos = pos.clone();
     for i in instructions.iter().rev() {
-        res = reverse_one(&res, i.clone(), &size);
+        res = reverse_one(&res, i, &size);
     }
     return res;
 }
@@ -252,15 +261,15 @@ fn main() {
     println!("Reading from file: {}", filename);
 
     let instructions = read_file(filename);
-    let deck = Deck::new(97);
+//    let deck = Deck::new(97);
     //   let orig = deck.cards.clone();
 
     let size = BigInt::from(119315717514047i128);
     let shuffles = BigInt::from(101741582076661i128);
 
-    let transform = extract_transform(&instructions, size.clone());
+    let transform = extract_transform(&instructions, &size);
 
-    let result = reverse(BigInt::from(2020), shuffles, size, transform);
+    let result = reverse(&BigInt::from(2020), &shuffles, &size, &transform).mod_floor(&size);
     println!("Result: {}", result.to_i128().unwrap());
 
 //   println!("Position: {}", pos);
@@ -272,8 +281,9 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use crate::Action::{DealWithIncrement, DealIntoNewStack, Cut};
-    use crate::{parse_action, Deck, read_file, reverse_one, simple_reverse, Pos, Size, extract_transform, reverse};
-    use num::{BigInt, ToPrimitive, One, Zero};
+    use crate::{parse_action, Deck, read_file, reverse_one, simple_reverse, Pos, Size, extract_transform, reverse, repeat_transform};
+    use num::{BigInt, ToPrimitive, One, Zero, Integer};
+    use std::borrow::Borrow;
 
 
     #[test]
@@ -302,13 +312,13 @@ mod tests {
         let mut deck = Deck::new(97);
         deck.apply_action(&Cut(Pos::from(3)));
         let actions = vec![Cut(Pos::from(3))];
-        let transform = extract_transform(&actions, Pos::from(97));
+        let transform = extract_transform(&actions, &Pos::from(97));
         let v = deck.get_card_vec();
         println!("{:?}", v);
         for x in 0..v.len()  {
             println!("{:?}", x);
-            assert_eq!(deck.get_card_vec()[x], reverse_one(&Pos::from(x), Cut(Pos::from(3)), &Size::from(97)).to_i128().unwrap());
-            let rev = reverse(Pos::from(x), BigInt::from(1), BigInt::from(97), transform.clone());
+            assert_eq!(deck.get_card_vec()[x], reverse_one(&Pos::from(x), &Cut(Pos::from(3)), &Size::from(97)).to_i128().unwrap());
+            let rev = reverse(&Pos::from(x), &BigInt::from(1), &BigInt::from(97), &transform);
             println!("Rev: {:?}", rev);
             assert_eq!(deck.get_card_vec()[x], rev.to_i128().unwrap());
         }
@@ -326,12 +336,12 @@ mod tests {
         let mut deck = Deck::new(97);
         deck.apply_action(&Cut(Pos::from(-3)));
         let actions = vec![Cut(Pos::from(-3))];
-        let transform = extract_transform(&actions, Pos::from(97));
+        let transform = extract_transform(&actions, &Pos::from(97));
         let v = deck.get_card_vec();
         println!("{:?}", v);
         for x in 0..v.len() {
-            assert_eq!(deck.get_card_vec()[x], reverse_one(&Pos::from(x), Cut(Pos::from(-3)), &Size::from(97)).to_i128().unwrap());
-            let rev = reverse(Pos::from(x), BigInt::from(1), BigInt::from(97), transform.clone());
+            assert_eq!(deck.get_card_vec()[x], reverse_one(&Pos::from(x), &Cut(Pos::from(-3)), &Size::from(97)).to_i128().unwrap());
+            let rev = reverse(&Pos::from(x), &BigInt::from(1), &BigInt::from(97), &transform);
             assert_eq!(deck.get_card_vec()[x], rev.to_i128().unwrap());
         }
     }
@@ -348,13 +358,13 @@ mod tests {
         let mut deck = Deck::new(97);
         deck.apply_action(&DealWithIncrement(Pos::from(10)));
         let actions = vec![DealWithIncrement(Pos::from(10))];
-        let transform = extract_transform(&actions, Pos::from(97));
+        let transform = extract_transform(&actions, &Pos::from(97));
         let v = deck.get_card_vec();
         println!("{:?}", v);
         for x in 0..v.len() {
             println!("{:?}", x);
-            assert_eq!(deck.get_card_vec()[x], reverse_one(&Pos::from(x), DealWithIncrement(Pos::from(10)), &Size::from(97)).to_i128().unwrap());
-            let rev = reverse(Pos::from(x), BigInt::from(1), BigInt::from(97), transform.clone());
+            assert_eq!(deck.get_card_vec()[x], reverse_one(&Pos::from(x), &DealWithIncrement(Pos::from(10)), &Size::from(97)).to_i128().unwrap());
+            let rev = reverse(&Pos::from(x), &BigInt::from(1), &BigInt::from(97), &transform);
             println!("REv: {:?}", rev);
             assert_eq!(deck.get_card_vec()[x], rev.to_i128().unwrap());
         }
@@ -410,14 +420,15 @@ mod tests {
         let res = deck.get_card_vec();
 //        assert_eq!(res[1498], 2019);
 
-        let transform = extract_transform(&instructions, Pos::from(10007));
+        let size = Pos::from(10007);
+        let transform = extract_transform(&instructions, &Pos::from(10007));
         let v = deck.get_card_vec();
         println!("{:?}", v);
         for x in 0..v.len() {
             println!("WOO{:?}", x);
-            let rev = reverse(Pos::from(x), BigInt::from(3), BigInt::from(10007), transform.clone());
+            let rev = reverse(&Pos::from(x), &BigInt::from(3), &BigInt::from(10007), &transform);
             //println!("REv: {:?}", rev);
-            assert_eq!(deck.get_card_vec()[x], rev.to_i128().unwrap());
+            assert_eq!(deck.get_card_vec()[x], rev.mod_floor(&size).to_i128().unwrap());
         }
     }
 
@@ -425,16 +436,61 @@ mod tests {
     fn test_simple_reverse() {
         let filename = "data/day22/input.txt";
         let instructions = read_file(filename);
-        let pos = simple_reverse(Pos::from(1498), &instructions, Size::from(10007));
+        let pos = simple_reverse(&Pos::from(1498), &instructions, &Size::from(10007));
         assert_eq!(pos, Pos::from(2019));
     }
     #[test]
     fn test_reverse() {
         let filename = "data/day22/input.txt";
         let instructions = read_file(filename);
-        let transform = extract_transform(&instructions, Size::from(10007));
+        let transform = extract_transform(&instructions, &Size::from(10007));
         println!("Transform is: {:?}", transform);
-        let res = reverse(Pos::from(1498), BigInt::one(), Size::from(10007), transform);
+        let res = reverse(&Pos::from(1498), &BigInt::one(), &Size::from(10007), &transform);
         println!("Res: {:?}", res);
+    }
+
+    #[test]
+    fn test_extract_transform() {
+        let filename = "data/day22/input.txt";
+        let size = Size::from(10007);
+        let instructions = read_file(filename);
+        let transform = extract_transform(&instructions, &size);
+        println!("Transform is: {:?}", transform);
+        let res = (Pos::from(2019) * transform.0.borrow() + transform.1.borrow()).mod_floor(&size);
+        assert_eq!(res, Pos::from(1498));
+    }
+
+    #[test]
+    fn test_transform_repeat() {
+        let size = Size::from(97);
+        let instructions = vec![
+            DealWithIncrement(Pos::from(10)),
+            Cut(Pos::from(3)),
+            DealIntoNewStack,
+        ];
+        let n = BigInt::from(13);
+        let mut ri = vec![];
+        for i in 0..n.to_u32().unwrap() {
+            ri.extend(instructions.clone())
+        }
+
+        let pos = BigInt::from(7);
+        // Repeated by instructions
+        let repeated_transform = extract_transform(&ri, &size);
+        println!("repeated: {:?}", &repeated_transform);
+
+        // Repeated by ^n
+        let single_transform = extract_transform(&instructions, &size);
+        println!("single: {:?}", &single_transform);
+
+
+        let rt = repeat_transform(&single_transform, &n, &size);
+
+        println!("r1: {:?} r2: {:?}", repeated_transform, rt);
+
+        let a = (pos.borrow() * repeated_transform.0.borrow() + repeated_transform.1.borrow()).mod_floor(size.borrow());
+        let b = (pos.borrow() * rt.0.borrow() + rt.1.borrow()).mod_floor(size.borrow());
+
+        assert_eq!(a,b);
     }
 }
