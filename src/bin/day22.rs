@@ -4,6 +4,7 @@ use regex::Regex;
 use std::str::FromStr;
 use num::{Integer, BigInt, ToPrimitive, Zero, One};
 use std::borrow::Borrow;
+use std::ops::BitAnd;
 
 extern crate regex;
 
@@ -41,7 +42,7 @@ impl Deck {
     }
 
     fn apply_action(&mut self, action :&Action) {
-        println!("Applying: {:?} to {:?} ({:?})", action, self, self.get_card_vec());
+//        println!("Applying: {:?} to {:?} ({:?})", action, self, self.get_card_vec());
         match action {
             // Reverse: *-1  diff*=-1
             Action::DealIntoNewStack => {
@@ -154,31 +155,31 @@ fn reverse_one(pos: &Pos, action :Action, size: &Size) -> Pos {
     }
 }
 
-// All transformations is on form x(k-1) = a*x(k) + b
+// All transformations is on form x(k) = a*x(k-1) + b
 type Transform = (BigInt, BigInt);
 
 fn extract_transform(instructions: &Instructions, size: BigInt) -> Transform {
     let mut transform: Transform = (BigInt::one(), BigInt::zero());
-    for i in instructions.iter().rev() {
-        println!("Transform: {:?} for: {:?}", transform, i);
+    for i in instructions.iter() {
+//        println!("Transform: {:?} for: {:?}", transform, i);
         match i {
             // Where x(k) = (a, b) (ax + b)
             Action::DealIntoNewStack => {
-                // x(k-1) = size -1 - x(k) = -1 * x(k) + (size - 1)
+                // x(k) = -x(k-1) + (1 - size)
                 let a = -1 * transform.0.borrow();
-                let b = -1 * transform.1.borrow() + size.borrow()  -1;
+                let b = -1 * transform.1.borrow() + (1 - size.borrow());
                 transform = (a, b);
             },
             Action::Cut(n) => {
-                // x(k-1) = x(k) + n
+                // x(k) = x(k-1) - n
                 let a = transform.0.borrow();
-                let b = transform.1.borrow() + n;
+                let b = transform.1.borrow() - n;
                 transform = (a.clone(), b);
             },
             Action::DealWithIncrement(n) => {
-                // x(k-1) = n*x(k)
-                let a = (transform.0.borrow() * n);
-                let b = (transform.1.borrow() * n);
+                // x(k) = n*x(k-1)
+                let a = transform.0.borrow() * n;
+                let b = transform.1.borrow() * n;
                 transform = (a, b);
             },
         }
@@ -187,10 +188,52 @@ fn extract_transform(instructions: &Instructions, size: BigInt) -> Transform {
     return transform;
 }
 
-fn reverse(pos: BigInt, n: BigInt, size: BigInt, transform: Transform) -> BigInt {
-    let a = transform.0.borrow() * pos.borrow() + transform.1.borrow();
-    let k = a.modpow(n.borrow(), size.borrow());
-    return (k.modpow((size.borrow() - BigInt::from(2)).borrow(), size.borrow())).mod_floor(size.borrow());
+  fn reverse(pos: BigInt, n: BigInt, size: BigInt, transform: Transform) -> BigInt {
+      let a = transform.0.borrow();
+      let b = transform.1.borrow();
+      /*
+      Repeated ^n by continuous substitution which yields;
+      x(k) ≅ a^n * x(0) + b + b*a + b*a^2 + .. + b*a^(n-1) . This is a geomerics series, for a!=0
+      x(k) ≅ a^n * x(0) + b*(a^n-1) * 1/(a-1)
+      if a=1 and n !=0
+      x(k) ≅ a^n * x(0) + b + b + b + .. + b . This
+
+      Fermats little theorem says that x^(n-1) ≅ 1 (mod n if n is prime), insert (1-a) as x
+      x(k) ≅ a^n * x(0) + b*(a^n-1) * (a-1)^(size-1)/(a-1)
+      x(k) ≅ a^n * x(0) + b*(a^n-1) * (a-1)^(size-2)
+             ----         --------------------------
+             repeated_a         repeated_b
+      */
+
+      let repeated_a;
+      let repeated_b;
+
+      if n.borrow() == &BigInt::one() {
+          println!("Warning");
+          repeated_a = a.clone();
+          repeated_b = b.clone();
+      } else {
+          assert_ne!(a, &BigInt::one()); // Need different formula for a==1 (don't think we need that though..)
+          repeated_a = a.modpow(n.borrow(), size.borrow());
+
+          if a.borrow() != &BigInt::one() {
+              println!("Normal");
+              // b*(a^n-1) * (a-1)^(size-2)
+              repeated_b = b * &(a.modpow(&n.borrow() , size.borrow()) - BigInt::one().borrow()) *
+                  (a - BigInt::one()).modpow(&(size.borrow() - BigInt::from(2)), size.borrow());
+          } else {
+              println!("Warning 2");
+              repeated_b = n * b;
+          }
+      }
+
+      println!("a: {:?}, b: {:?}", a, b);
+      println!("ra: {:?}, rb: {:?}", repeated_a, repeated_b);
+
+      // Now we solve x(k) ≅ a*x(0) + b (mod size)
+      // This has the solution x(0) = a^(size-2) * (x(k) - b)
+      let x0 = (repeated_a.modpow(&(size.borrow() - BigInt::from(2)), size.borrow()) * (pos - repeated_b)).mod_floor(size.borrow());
+      return x0;
 }
 
 
@@ -205,18 +248,19 @@ fn simple_reverse(pos: Pos, instructions: &Instructions, size: Size) -> Pos {
 
 
 fn main() {
-//    let args: Vec<String> = env::args().collect();
-//    let filename = &args[1];
-    let filename = "data/day22/test5.txt";
+    let filename = "data/day22/input.txt";
     println!("Reading from file: {}", filename);
 
     let instructions = read_file(filename);
-    let mut deck = Deck::new(97);
+    let deck = Deck::new(97);
     //   let orig = deck.cards.clone();
 
-    let transform = extract_transform(&instructions, BigInt::from(119315717514047i128));
+    let size = BigInt::from(119315717514047i128);
+    let shuffles = BigInt::from(101741582076661i128);
 
-    let result = reverse(BigInt::from(2020), BigInt::from(101741582076661i128), BigInt::from(119315717514047i128), transform);
+    let transform = extract_transform(&instructions, size.clone());
+
+    let result = reverse(BigInt::from(2020), shuffles, size, transform);
     println!("Result: {}", result.to_i128().unwrap());
 
 //   println!("Position: {}", pos);
@@ -265,6 +309,7 @@ mod tests {
             println!("{:?}", x);
             assert_eq!(deck.get_card_vec()[x], reverse_one(&Pos::from(x), Cut(Pos::from(3)), &Size::from(97)).to_i128().unwrap());
             let rev = reverse(Pos::from(x), BigInt::from(1), BigInt::from(97), transform.clone());
+            println!("Rev: {:?}", rev);
             assert_eq!(deck.get_card_vec()[x], rev.to_i128().unwrap());
         }
     }
@@ -311,7 +356,7 @@ mod tests {
             assert_eq!(deck.get_card_vec()[x], reverse_one(&Pos::from(x), DealWithIncrement(Pos::from(10)), &Size::from(97)).to_i128().unwrap());
             let rev = reverse(Pos::from(x), BigInt::from(1), BigInt::from(97), transform.clone());
             println!("REv: {:?}", rev);
-//            assert_eq!(deck.get_card_vec()[x], rev.to_i128().unwrap());
+            assert_eq!(deck.get_card_vec()[x], rev.to_i128().unwrap());
         }
     }
 
@@ -360,8 +405,20 @@ mod tests {
         let instructions = read_file(filename);
         let mut deck = Deck::new(10007);
         deck.apply_instructions(&instructions);
+        deck.apply_instructions(&instructions);
+        deck.apply_instructions(&instructions);
         let res = deck.get_card_vec();
-        assert_eq!(res[1498], 2019);
+//        assert_eq!(res[1498], 2019);
+
+        let transform = extract_transform(&instructions, Pos::from(10007));
+        let v = deck.get_card_vec();
+        println!("{:?}", v);
+        for x in 0..v.len() {
+            println!("WOO{:?}", x);
+            let rev = reverse(Pos::from(x), BigInt::from(3), BigInt::from(10007), transform.clone());
+            //println!("REv: {:?}", rev);
+            assert_eq!(deck.get_card_vec()[x], rev.to_i128().unwrap());
+        }
     }
 
     #[test]
