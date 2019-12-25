@@ -213,25 +213,10 @@ fn repeat_transform(transform: &Transform, n: &BigInt, size: &BigInt) -> Transfo
     let repeated_a;
     let repeated_b;
 
-    if n.borrow() == &BigInt::one() {
-        println!("Warning");
-        repeated_a = a.clone();
-        repeated_b = b.clone();
-    } else {
-//        assert_ne!(a, &BigInt::one()); // Need different formula for a==1 (don't think we need that though..)
-        repeated_a = a.modpow(n.borrow(), size.borrow());
+    repeated_a = a.modpow(n.borrow(), size.borrow());
+    repeated_b = b.borrow() * &(a.modpow(&n.borrow() , size.borrow()) - BigInt::one().borrow()) *
+        (a - BigInt::one()).modpow(&(size.borrow() - BigInt::from(2)), size.borrow());
 
-        if a.borrow() != &BigInt::one() {
-            println!("Normal");
-            // b*(a^n-1) * (a-1)^(size-2)
-            repeated_b = b.borrow() * &(a.modpow(&n.borrow() , size.borrow()) - BigInt::one().borrow()) *
-                (a - BigInt::one()).modpow(&(size.borrow() - BigInt::from(2)), size.borrow());
-        } else {
-            println!("Warning 2");
-            repeated_b = n * b.borrow();
-        }
-    }
-    println!("ra: {:?}, rb: {:?}", repeated_a, repeated_b);
     return (repeated_a, repeated_b);
 
 }

@@ -32,9 +32,9 @@ pub trait IO {
     fn receive(&mut self) -> Message;
 }
 
-struct StandardIO {
-    stdin: Receiver<Message>,
-    stdout: SyncSender<Message>,
+pub struct StandardIO {
+    pub stdin: Receiver<Message>,
+    pub stdout: SyncSender<Message>,
 }
 
 impl IO for StandardIO {
