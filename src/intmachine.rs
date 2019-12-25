@@ -234,17 +234,9 @@ pub fn execute_with_result(initial: &Memory, in_data: Vec<Word>) -> OutputData {
     return result;
 }
 
-/*
-pub fn execute(initial: &Memory, network_receive: Receiver<Message>, network_send: SyncSender<Message>) {
-
-
-
-}
-*/
-
 pub fn execute(initial: &Memory, io: &mut dyn IO) -> (Memory) {
 
-    const LEN :i64 = 640 * 1024 * 1024; // Should be enough..
+    const LEN :i64 = 32 * 1024; // Should be enough..
     let mut mem = vec![0; LEN as usize];
     for i in 0..initial.len() {
         mem[i] = initial[i];
